@@ -383,6 +383,49 @@ if [ "$1" = 'rabbitmq-server' ] && [ "$shouldWriteConfig" ]; then
 		)
 	fi
 
+	# if rabbitmq_management_exchange plugin is installed, generate config for it
+	if [ "$(rabbitmq-plugins list -m -e rabbitmq_management_exchange)" ]; then
+		rabbitManagementExchangeConfig=()
+		rabbitManagementExchangeConfig+=(
+			"{username, \"$RABBITMQ_DEFAULT_USER\"}"
+			"{password, \"$RABBITMQ_DEFAULT_PASS\"}"
+		)
+		fullConfig+=(
+			"{ rabbitmq_management_exchange, $(rabbit_array "${rabbitManagementExchangeConfig[@]}") }"
+		)
+	fi
+
+  # if rabbitmq_web_stomp plugin is installed, generate config for it
+	if [ "$(rabbitmq-plugins list -m -e rabbitmq_web_stomp)" ]; then
+		rabbitWebStompConfig=()
+		rabbitWebStompConfig+=(
+			'{use_http_auth, true}'
+		)
+		fullConfig+=(
+			"{ rabbitmq_web_stomp, $(rabbit_array "${rabbitWebStompConfig[@]}") }"
+		)
+	fi
+
+  # if rabbitmq_auth_backend_http plugin is installed, generate config for it
+	if [ "$(rabbitmq-plugins list -m -e rabbitmq_auth_backend_http)" ]; then
+		rabbitauthBackendHttpConfig=()
+		rabbitauthBackendHttpConfig+=(
+			"{http_method, post}"
+			"{user_path,     \"$RABBITMQ_AUTH_ENDPOINT/user\"}"
+			"{vhost_path,    \"$RABBITMQ_AUTH_ENDPOINT/vhost\"}"
+			"{resource_path, \"$RABBITMQ_AUTH_ENDPOINT/resource\"}"
+			"{topic_path,    \"$RABBITMQ_AUTH_ENDPOINT/topic\"}"
+		)
+
+		rabbitConfig+=(
+			"{ auth_backends, [rabbit_auth_backend_internal,rabbit_auth_backend_http]}"
+		)
+
+		fullConfig+=(
+			"{ rabbitmq_auth_backend_http, $(rabbit_array "${rabbitauthBackendHttpConfig[@]}") }"
+		)
+	fi
+
 	echo "$(rabbit_array "${fullConfig[@]}")." > /etc/rabbitmq/rabbitmq.config
 fi
 
